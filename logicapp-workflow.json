@@ -1,0 +1,37 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "actions": {
+      "Runbook": {
+        "type": "AzureAutomation",
+        "inputs": {
+          "parameters": {
+            "Username": "@triggerBody()?['username']"
+          },
+          "runbookName": "HybridUserDeactivation",
+          "resourceGroupName": "rg-automation",
+          "automationAccountName": "automation-hybrid"
+        },
+        "runAfter": {}
+      }
+    },
+    "triggers": {
+      "manual": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string"
+              }
+            },
+            "required": ["username"]
+          }
+        }
+      }
+    },
+    "outputs": {}
+  }
+}
