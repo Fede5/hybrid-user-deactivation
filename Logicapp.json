@@ -1,0 +1,145 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "Parse_JSON_Payload": {
+                "type": "ParseJson",
+                "inputs": {
+                    "content": "@triggerBody()",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "UserPrincipalName": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "UserPrincipalName"
+                        ]
+                    }
+                },
+                "runAfter": {}
+            },
+            "Create_job_OnPrem_Deactivation": {
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azureautomation']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "body": {
+                        "properties": {
+                            "runbook": {
+                                "name": "Disable-OnPremUser" // <<< Nombre de tu Runbook On-Prem
+                            },
+                            "parameters": {
+                                "UserIdentifier": "@body('Parse_JSON_Payload')?['UserPrincipalName']" // Pasar UPN como identificador
+                            },
+                            "runOn": "YourHybridWorkerGroupName" // <<< Nombre de tu Grupo de Hybrid Worker
+                        }
+                    },
+                    "path": "/subscriptions/@{encodeURIComponent(parameters('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(parameters('ResourceGroupName'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(parameters('AutomationAccountName'))}/jobs" // <<< Parámetros de tu Cuenta de Automation
+                    "queries": {
+                        "x-ms-api-version": "2015-10-31"
+                    }
+                },
+                "runAfter": {
+                    "Parse_JSON_Payload": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Create_job_EntraID_Deactivation": {
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azureautomation']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "body": {
+                        "properties": {
+                            "runbook": {
+                                "name": "Disable-EntraUser" // <<< Nombre de tu Runbook Entra ID
+                            },
+                            "parameters": {
+                                "UserPrincipalName": "@body('Parse_JSON_Payload')?['UserPrincipalName']"
+                            }
+                            // No se especifica 'runOn', por lo que se ejecuta en Azure
+                        }
+                    },
+                    "path": "/subscriptions/@{encodeURIComponent(parameters('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(parameters('ResourceGroupName'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(parameters('AutomationAccountName'))}/jobs" // <<< Parámetros de tu Cuenta de Automation
+                    "queries": {
+                        "x-ms-api-version": "2015-10-31"
+                    }
+                },
+                 "runAfter": {
+                     // Puedes ejecutarla en paralelo a la On-Prem o después
+                     "Create_job_OnPrem_Deactivation": [
+                        "Succeeded" // Ejecutar sólo si la On-Prem tuvo éxito (o ajusta según necesidad)
+                        // "Failed", "Skipped", "TimedOut" // Considera ejecutarla incluso si la On-Prem falla
+                    ]
+                }
+            }
+             // --- Opcional: Añadir manejo de errores y notificaciones ---
+            // Ejemplo: Scope para Try/Catch, Get Job Output, Condiciones, Enviar Email/Teams, etc.
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            },
+            "SubscriptionId": { // <<< Tu Subscription ID
+                "defaultValue": "YOUR_SUBSCRIPTION_ID",
+                "type": "String"
+            },
+            "ResourceGroupName": { // <<< Grupo de Recursos de la Cuenta de Automation
+                "defaultValue": "YOUR_AUTOMATION_RG_NAME",
+                "type": "String"
+            },
+             "AutomationAccountName": { // <<< Nombre de tu Cuenta de Automation
+                "defaultValue": "YOUR_AUTOMATION_ACCOUNT_NAME",
+                "type": "String"
+            }
+            // Puedes añadir más parámetros para los nombres de Runbook, Hybrid Worker Group, etc.
+        },
+        "triggers": {
+            "manual": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "method": "POST",
+                    "schema": {
+                       "type": "object",
+                       "properties": {
+                           "UserPrincipalName": {
+                               "type": "string",
+                               "description": "UPN del usuario a desactivar"
+                           }
+                       },
+                       "required": [
+                           "UserPrincipalName"
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "azureautomation": {
+                    // Este ID se genera al crear la conexión en Logic Apps
+                    "connectionId": "/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_LOGICAPP_RG/providers/Microsoft.Web/connections/azureautomation",
+                    "connectionName": "azureautomation",
+                    "id": "/subscriptions/YOUR_SUBSCRIPTION_ID/providers/Microsoft.Web/locations/YOUR_REGION/managedApis/azureautomation"
+                }
+            }
+        }
+    }
+}
