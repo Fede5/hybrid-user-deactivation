@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/Fede5/hybrid-user-deactivation/raw/main/deactivation-banner.png" alt="Banner" />
+</p>
+
 # Hybrid User Deactivation Workflow
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-0078D4?logo=powershell&logoColor=white)
