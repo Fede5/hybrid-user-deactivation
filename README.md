@@ -1,34 +1,91 @@
 # Hybrid User Deactivation Workflow
 
-This project demonstrates an automated hybrid offboarding workflow using Azure Logic Apps and Azure Automation. It deactivates users both in on-premises Active Directory and Entra ID (Azure AD).
+![PowerShell](https://img.shields.io/badge/PowerShell-0078D4?logo=powershell&logoColor=white)
+![Azure](https://img.shields.io/badge/Azure-0078D4?logo=microsoftazure&logoColor=white)
+![Microsoft Graph](https://img.shields.io/badge/Microsoft%20Graph-2B88D8?logo=microsoft&logoColor=white)
+![Automation](https://img.shields.io/badge/Automation-Enabled-brightgreen)
+![Status](https://img.shields.io/badge/Production%20Ready-Yes-green)
 
-## 🔐 What it does
+This project provides a complete solution to automate the deactivation of hybrid users across both **on-premises Active Directory (AD)** and **Microsoft Entra ID (Azure AD)** using:
 
-- Disables the user account in AD and Azure AD
-- Removes the user from all on-prem and cloud groups
-- Resets their password (on-prem)
-- Clears MFA methods and devices (Azure)
+- 💻 PowerShell Automation Runbooks
+- 🔗 Azure Logic App for orchestration
+- ☁️ Microsoft Graph API for Entra operations
 
-## 📂 Files
+---
 
-- `runbook.ps1`: PowerShell script to run on a Hybrid Runbook Worker
-- `logicapp-workflow.json`: Logic App to trigger deactivation via HTTP or scheduled flow
+## 🧩 Components
 
-## 🧰 Requirements
+### 1. `disable-onpremuser.ps1`
+> **Location**: On-Premises Automation (via Hybrid Worker)
 
-- Azure Automation Account with hybrid worker group connected to domain
-- Logic App with HTTP trigger
-- AzureAD and ActiveDirectory PowerShell modules
+- Disables AD account (`Disable-ADAccount`)
+- Removes user from all AD groups
+- Resets password with strong random string
 
-## 🚀 Usage
+### 2. `Disable-EntraUser.ps1`
+> **Location**: Azure Automation Runbook
 
-1. Deploy the Logic App and connect it to your Automation Account.
-2. Import the runbook into Azure Automation.
-3. Configure credentials and authentication in the Automation Account.
-4. Trigger the Logic App with a POST request:
+- Disables Entra ID account
+- Removes group memberships
+- Deletes MFA methods and registered devices
+- Forces password reset
+
+### 3. `Logicapp.json`
+> **Location**: Azure Logic App (Consumption or Standard)
+
+- Trigger: HTTP request with `UserPrincipalName`
+- Action 1: Disable on-prem user
+- Action 2: Disable Entra ID user
+
+---
+
+## 🚀 Demo
 
 ```json
 {
-  "username": "john.doe@yourdomain.com"
+  "UserPrincipalName": "jdoe@domain.com"
 }
 ```
+
+- Submit via HTTP to the Logic App trigger URL.
+- The user is automatically disabled across both environments.
+
+---
+
+## ✅ Prerequisites
+
+- Azure Automation Account with Hybrid Worker
+- Microsoft Graph PowerShell modules
+- API Permissions: `User.ReadWrite.All`, `Directory.ReadWrite.All`, `Group.ReadWrite.All`
+- Logic App with permission to invoke Automation Jobs
+
+---
+
+## 🔐 Security Considerations
+
+- No passwords logged or exposed
+- Secure password generation with high entropy
+- MFA methods and registered devices are forcefully removed
+
+---
+
+## 📂 Files in this Repo
+
+| File                   | Description                                |
+|------------------------|--------------------------------------------|
+| `disable-onpremuser.ps1` | Disables and cleans user in AD              |
+| `Disable-EntraUser.ps1`  | Disables and resets user in Entra ID       |
+| `Logicapp.json`          | Logic App definition for orchestrated flow |
+
+---
+
+## 🤝 Author
+
+**Harry Federico Argote Carrasco**  
+Senior Cloud Engineer | Azure Specialist  
+📍 Bella Vista, Buenos Aires, Argentina
+
+---
+
+> Feel free to fork, reuse or suggest improvements via Pull Requests.
